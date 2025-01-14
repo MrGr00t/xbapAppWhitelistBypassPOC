@@ -23,8 +23,13 @@ jobs:
       run: |
         choco install netfx-4.8-devpack -y
 
+    # Verify .NET Framework Reference Assemblies
+    - name: Verify .NET Framework Reference Assemblies
+      run: |
+        dir "C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8"
+
     # Step 3: Install Visual Studio 2019 Build Tools
-    - name: Install Visual Studio Build Tools
+    - name: Install Build Tools
       run: |
         choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.ManagedDesktopBuildTools" -y
 
@@ -33,23 +38,22 @@ jobs:
       run: |
         echo "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin" >> $env:GITHUB_PATH
 
-    # Step 5: Clean Build Directories
+    # Step 5: Restore NuGet Packages (Optional)
+    - name: Restore NuGet Packages
+      run: |
+        nuget restore powershell.sln
+
+    # Step 6: Clean Build Directories
     - name: Clean Build Directories
       run: |
-        if exist bin rmdir /s /q bin
         if exist obj rmdir /s /q obj
+        if exist bin rmdir /s /q bin
       shell: cmd
 
-    # Step 6: Build with MSBuild
+    # Step 7: Build with MSBuild
     - name: Build with MSBuild
       run: |
-        msbuild powershell.sln /p:Configuration=Release /p:SignManifests=false /p:OutDir=$(System.DefaultWorkingDirectory)\bin\Release
-
-    # Step 7: Verify Build Output
-    - name: Verify Build Output
-      run: |
-        echo "Listing files in bin\Release directory:"
-        dir bin\Release /s
+        msbuild powershell.sln /p:Configuration=Release /p:TargetFrameworkProfile="" /p:TargetFrameworkVersion=v4.8 /p:SignManifests=false
 
     # Step 8: Upload Build Artifacts
     - name: Upload Build Artifacts
@@ -58,4 +62,3 @@ jobs:
         name: Build-Output
         path: bin/Release/
         retention-days: 7
-        if-no-files-found: warn
