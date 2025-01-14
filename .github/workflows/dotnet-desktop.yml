@@ -1,11 +1,11 @@
 name: Build XBAP Project
 
 on:
-  workflow_dispatch: # 手动触发
-  push:
+  workflow_dispatch: # 手动手工触发 Workflow
+  push: # 当代码推送到指定分支时触发
     branches:
       - main
-  pull_request:
+  pull_request: # 当 PR 创建时触发
     branches:
       - main
 
@@ -14,51 +14,58 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # Step 1: Checkout Code
+    # Step 1: 检出代码
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    # Step 2: Install .NET Framework 4.8 Developer Pack
+    # Step 2: 安装 .NET Framework 4.8 Developer Pack
     - name: Install .NET Framework 4.8 Developer Pack
       run: |
         choco install netfx-4.8-devpack -y
 
-    # Verify .NET Framework Reference Assemblies
+    # Step 3: 验证 .NET Framework 引用程序集是否安装成功
     - name: Verify .NET Framework Reference Assemblies
       run: |
         dir "C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8"
 
-    # Step 3: Install Visual Studio 2019 Build Tools
-    - name: Install Build Tools
+    # Step 4: 安装 Visual Studio 2019 Build Tools
+    - name: Install Visual Studio Build Tools
       run: |
         choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.ManagedDesktopBuildTools" -y
 
-    # Step 4: Add MSBuild to PATH
+    # Step 5: 将 MSBuild 添加到 PATH
     - name: Add MSBuild to PATH
       run: |
         echo "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin" >> $env:GITHUB_PATH
 
-    # Step 5: Restore NuGet Packages (Optional)
+    # Step 6: 还原 NuGet 包（可选步骤）
     - name: Restore NuGet Packages
       run: |
         nuget restore powershell.sln
 
-    # Step 6: Clean Build Directories
+    # Step 7: 清理构建目录（确保干净的构建环境）
     - name: Clean Build Directories
       run: |
         if exist obj rmdir /s /q obj
         if exist bin rmdir /s /q bin
       shell: cmd
 
-    # Step 7: Build with MSBuild
+    # Step 8: 使用 MSBuild 构建项目
     - name: Build with MSBuild
       run: |
-        msbuild powershell.sln /p:Configuration=Release /p:TargetFrameworkProfile="" /p:TargetFrameworkVersion=v4.8 /p:SignManifests=false
+        msbuild powershell.sln /p:Configuration=Release /p:TargetFrameworkProfile="" /p:TargetFrameworkVersion=v4.0 /p:SignManifests=false /p:OutDir=bin\Release
 
-    # Step 8: Upload Build Artifacts
+    # Step 9: 验证构建输出
+    - name: Verify Build Output
+      run: |
+        echo "Listing generated files in bin\Release directory:"
+        dir bin\Release /s
+
+    # Step 10: 上传构建产物
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: Build-Output
-        path: bin/Release/
-        retention-days: 7
+        name: Build-Output                # 上传的 Artifact 名称
+        path: bin/Release/                # 构建产物的路径
+        retention-days: 7                 # 文件保存时间（7 天）
+        if-no-files-found: warn           # 如果没有文件，仅警告，不报错
