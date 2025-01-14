@@ -1,9 +1,9 @@
 name: Build XBAP Project
 
-# 触发条件：手动触发、代码推送或 PR 合并
+# 触发条件：手动触发、代码推送或 PR
 on:
   workflow_dispatch: # 手动触发
-  push: # 自动触发
+  push:
     branches:
       - main
   pull_request:
@@ -15,37 +15,41 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # 步骤 1: 检出代码
+    # 检出代码
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    # 步骤 2: 安装 MSBuild 和 .NET Framework
-    - name: Install Build Tools and Framework
+    # 安装 .NET Framework 4.8 Developer Pack
+    - name: Install .NET Framework 4.8 Developer Pack
       run: |
-        choco install dotnetfx --version=4.8 -y
+        choco install netfx-4.8-devpack -y
+
+    # 安装 Visual Studio 2019 Build Tools
+    - name: Install Build Tools
+      run: |
         choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.ManagedDesktopBuildTools" -y
 
-    # 步骤 3: 将 MSBuild 路径添加到环境变量（新方式）
+    # 将 MSBuild 路径添加到环境变量
     - name: Add MSBuild to PATH
       run: |
         echo "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin" >> $env:GITHUB_PATH
 
-    # 步骤 4: 清理构建目录
+    # 清理构建目录
     - name: Clean Build Directories
       run: |
         if exist obj rmdir /s /q obj
         if exist bin rmdir /s /q bin
       shell: cmd
 
-    # 步骤 5: 使用 MSBuild 编译项目
+    # 使用 MSBuild 构建项目
     - name: Build with MSBuild
       run: |
         msbuild powershell.sln /p:Configuration=Release /p:SignManifests=false /p:TargetFrameworkVersion=v4.8
 
-    # 步骤 6: 上传编译产物供下载
+    # 上传构建产物
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: Build-Output # Artifact 文件的名称
+        name: Build-Output
         path: bin/Release/ # 编译输出路径
-        retention-days: 7 # 保存 7 天（可选，默认 90 天）
+        retention-days: 7
