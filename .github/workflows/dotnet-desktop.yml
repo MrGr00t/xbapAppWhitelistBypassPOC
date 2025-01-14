@@ -1,52 +1,49 @@
-name: .NET Core Desktop
+name: Build XBAP Project
 
+# 手动触发 Workflow
 on:
-  workflow_dispatch:
+  workflow_dispatch: # 手动触发事件，用户可以通过 GitHub Actions 页面手动运行
   push:
-    branches: [ "master" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "master" ]
+    branches:
+      - main
 
 jobs:
-
   build:
-
-    strategy:
-      matrix:
-        configuration: [Release]
-
-    runs-on: windows-2019
-
-    env:
-      Solution_Name: powershell.sln    #文件名                     # Replace with your solution name, i.e. MyWpfApp.sln.
+    runs-on: windows-latest
 
     steps:
-    - name: Checkout
+    # 步骤 1: 检出代码
+    - name: Checkout Code
       uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
-    # Install the .NET Core workload
-    - name: Install .NET Core
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 6.0.x
-
-    # Add MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v1.0.2
-
-    # Restore the application to populate the obj folder with RuntimeIdentifiers
-    - name: Restore the application
-      # run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
+    # 步骤 2: 设置 .NET Framework 环境
+    - name: Setup .NET Framework
       run: |
-        msbuild ${{ github.workspace }}\powershell.sln   # 这里路径要看好，写sln或者csproj的
-      env:
-        Configuration: ${{ matrix.configuration }}
+        choco install dotnetfx --version=4.8
+        choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.ManagedDesktopBuildTools"
 
-    # Upload the artifact 
-    - name: Upload Artifact
+    # 步骤 3: 安装 NuGet 依赖
+    - name: Install NuGet Dependencies
+      run: |
+        nuget restore powershell.sln
+
+    # 步骤 4: 清理构建文件夹
+    - name: Clean Build Directories
+      run: |
+        if exist obj rmdir /s /q obj
+        if exist bin rmdir /s /q bin
+
+    # 步骤 5: 使用 MSBuild 编译
+    - name: Build with MSBuild
+      run: |
+        msbuild powershell.sln /p:Configuration=Release /p:SignManifests=false /p:TargetFrameworkVersion=v4.8
+
+    # 步骤 6: 上传编译产物
+    - name: Upload Build Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: powershell
-        path: ${{ github.workspace }}
+        name: Build-Output # 设置 Artifact 名称
+        path: bin/Release/ # 上传的文件路径
