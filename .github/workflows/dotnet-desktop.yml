@@ -15,41 +15,42 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # 检出代码
+    # 步骤 1: 检出代码
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    # 安装 .NET Framework 4.8 Developer Pack
+    # 步骤 2: 安装 .NET Framework 4.8 Developer Pack 和 Build Tools
     - name: Install .NET Framework 4.8 Developer Pack
       run: |
         choco install netfx-4.8-devpack -y
-
-    # 安装 Visual Studio 2019 Build Tools
-    - name: Install Build Tools
-      run: |
         choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.ManagedDesktopBuildTools" -y
 
-    # 将 MSBuild 路径添加到环境变量
+    # 步骤 3: 将 MSBuild 路径添加到环境变量
     - name: Add MSBuild to PATH
       run: |
         echo "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin" >> $env:GITHUB_PATH
 
-    # 清理构建目录
+    # 步骤 4: 恢复 NuGet 包（可选）
+    - name: Restore NuGet Packages
+      run: |
+        nuget restore powershell.sln
+
+    # 步骤 5: 清理构建目录
     - name: Clean Build Directories
       run: |
         if exist obj rmdir /s /q obj
         if exist bin rmdir /s /q bin
       shell: cmd
 
-    # 使用 MSBuild 构建项目
+    # 步骤 6: 使用 MSBuild 构建项目
     - name: Build with MSBuild
       run: |
-        msbuild powershell.sln /p:Configuration=Release /p:SignManifests=false /p:TargetFrameworkVersion=v4.8
+        msbuild powershell.sln /p:Configuration=Release /p:TargetFrameworkVersion=v4.8 /p:SignManifests=false
 
-    # 上传构建产物
+    # 步骤 7: 上传构建产物
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v3
       with:
         name: Build-Output
-        path: bin/Release/ # 编译输出路径
+        path: bin/Release/
         retention-days: 7
